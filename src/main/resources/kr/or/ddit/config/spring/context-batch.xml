@@ -4,11 +4,20 @@
 	xmlns:batch="http://www.springframework.org/schema/batch"
 	xmlns:task="http://www.springframework.org/schema/task"
 	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
 	xsi:schemaLocation="http://www.springframework.org/schema/batch http://www.springframework.org/schema/batch/spring-batch.xsd
 		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
 		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
 	<!-- datasource : db.properties -->
+	<context:component-scan base-package="kr.or.ddit"></context:component-scan>
+	<context:annotation-config>
+	</context:annotation-config>
+	
+	
 	<context:property-placeholder location="classpath:kr/or/ddit/config/db/db.properties"/>
 	<bean id="datasource" class="org.apache.commons.dbcp2.BasicDataSource">
 		<property name="url" value="${jdbc.url}"/>
@@ -25,31 +34,20 @@
 		<property name="configLocation" value="classpath:kr/or/ddit/config/db/mybatis-config.xml"/>
 	</bean>
 	
-	<bean id="yogultItemReader" class="org.mybatis.spring.batch.MyBatisCursorItemReader">
-		<property name="sqlSessionFactory" ref="sqlSessionFactory"></property>
-		<property name="queryId" value="yogult.getCycleList"/>
-	</bean>	
-	<bean id="yogultItemProcessor" class="kr.or.ddit.yogult.batch.yogultItemProcessor" scope="step"/>
-	
-	<bean id="yogultItemWriter" class="kr.or.ddit.yogult.batch.CustomMyBatisItemWriter">
-		<property name="sqlSessionFactory" ref="sqlSessionFactory"/>
-		<property name="statementId" value="yogult.mergeDaily"/>
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg ref="sqlSessionFactory"></constructor-arg>
 	</bean>
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="*" />
+		</tx:attributes>
+	</tx:advice>	
 	
-	<batch:job-repository id="jobRepository" data-source="datasource" transaction-manager="transactionManager"/>
-	<bean id ="jobLauncher" class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
-		<property name="jobRepository" ref="jobRepository"/>
-	</bean>
+	<aop:config>
+		<aop:advisor advice-ref="txAdvice" pointcut="execution(* kr.or.ddit..*.service.*(..))"/>
+	</aop:config>
 	
-	<batch:job id="yogultJob" restartable="true">
-		<batch:step id="step1" allow-start-if-complete="true">
-			<batch:tasklet >
-				<batch:chunk reader="yogultItemReader" processor="yogultItemProcessor" writer="yogultItemWriter" commit-interval="1">
-				</batch:chunk>
-			</batch:tasklet>
-		</batch:step>
-	</batch:job>
-	<bean id="yogultTask" class="kr.or.ddit.yogult.batch.YogultTask"></bean>
+		
 	<task:scheduler id="scheduler"/>
 	<task:executor id="executor"/>
 	<task:annotation-driven executor="executor" scheduler="scheduler"/>

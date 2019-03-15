@@ -1,4 +1,4 @@
-package kr.or.ddit.yogult.batch;
+package kr.or.ddit.batch;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

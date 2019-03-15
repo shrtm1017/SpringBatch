@@ -1,4 +1,4 @@
-package kr.or.ddit.yogult.batch;
+package kr.or.ddit.batch;
 
 import static org.springframework.util.Assert.isTrue;
 import static org.springframework.util.Assert.notNull;
